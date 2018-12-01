@@ -9,6 +9,7 @@ Created on Sun Nov 25 16:15:36 2018
 import pygame
 import numpy as np
 import opticalElement
+import copy
 
 pygame.init()
 
@@ -27,10 +28,12 @@ PI = np.pi
 size = (700, 700)
 screen = pygame.display.set_mode(size)
 
-coord_lims_default = [[-1000.0,1000.0],[-1000.0,1000.0]]
+coord_lims_default = np.array([[-1000.0,1000.0],[-1000.0,1000.0]])
 coord_lims = coord_lims_default
 
-MAX_BOUNCE = 20
+MAX_BOUNCE = 100
+
+ZOOMFACTOR = 1.3
 
 def screenMapFunction(pos):
     rangeX = abs(coord_lims[0][0] - coord_lims[0][1])
@@ -135,6 +138,9 @@ mouseNear_elementIndex = None
 
 rotating_elementIndex = None
 scaling_elementIndex = None
+
+viewDrag_mouseStart = None
+viewDrag_cstart = None
     
 while not done:
     
@@ -155,8 +161,12 @@ while not done:
                 rotating_elementIndex = mouseNear_elementIndex
             elif event.unicode == 's':    #Scale
                 scaling_elementIndex = mouseNear_elementIndex
-            elif event.unicode == '0':
+            elif event.unicode == '0':   #Reset View
                 coord_lims = coord_lims_default
+            elif event.unicode == 'd':
+                if(mouseNear_elementIndex is not None):
+                    del elements[mouseNear_elementIndex]
+                    mouseNear_elementIndex = None
             elif event.key == 282:
                 coord_lims = np.array(coord_lims) * 2
             elif event.key == 283:
@@ -175,11 +185,29 @@ while not done:
     #-------Mouse Events--------
         elif event.type == pygame.MOUSEBUTTONDOWN:     #Mouse click events
             print(event)
-            for i in range(0,len(elements)):
-                mousePos = np.array(pygame.mouse.get_pos())
-                if(elements[i].checkIfMouseNear(mousePos, screenMapFunction)):
-                    print("Grabbed element %d" % i)
-                    mouseSelection_elementIndex = i
+            mousePos = np.array(pygame.mouse.get_pos())
+            if(event.button == 1):
+                for i in range(0,len(elements)):
+                    if(elements[i].checkIfMouseNear(mousePos, screenMapFunction)):
+                        print("Grabbed element %d" % i)
+                        mouseSelection_elementIndex = i
+            elif(event.button == 3):
+                x, y, scaleX, scaleY = screenMapInv(mousePos)
+                viewDrag_mouseStart = np.array([x,y])
+                viewDrag_cstart = copy.deepcopy(coord_lims)
+                
+            elif(event.button == 4):
+                x, y, scaleX, scaleY = screenMapInv(mousePos)
+                coord_lims[0][0] = (coord_lims[0][0] - x) * ZOOMFACTOR + x
+                coord_lims[0][1] = (coord_lims[0][1] - x) * ZOOMFACTOR + x
+                coord_lims[1][0] = (coord_lims[1][0] + y) * ZOOMFACTOR - y
+                coord_lims[1][1] = (coord_lims[1][1] + y) * ZOOMFACTOR - y
+            elif(event.button == 5):
+                x, y, scaleX, scaleY = screenMapInv(mousePos)
+                coord_lims[0][0] = (coord_lims[0][0] - x) / ZOOMFACTOR + x
+                coord_lims[0][1] = (coord_lims[0][1] - x) / ZOOMFACTOR + x
+                coord_lims[1][0] = (coord_lims[1][0] + y) / ZOOMFACTOR - y
+                coord_lims[1][1] = (coord_lims[1][1] + y) / ZOOMFACTOR - y
             rotating_elementIndex = None
             scaling_elementIndex = None
         
@@ -200,6 +228,10 @@ while not done:
                 relVect = np.array([x,y]) - elements[scaling_elementIndex].pos
                 newScale = np.linalg.norm([relVect[1],relVect[0]])
                 elements[scaling_elementIndex].boundaries = newScale
+            elif(viewDrag_mouseStart is not None):
+                dragVect = np.array([x,y]) - viewDrag_mouseStart
+                coord_lims = viewDrag_cstart + np.array([[-dragVect[0]]*2,[dragVect[1]]*2])/1.2
+                
             else:
                 mouseNear_elementIndex = None
                 for i in range(0,len(elements)):
@@ -216,6 +248,7 @@ while not done:
                 print("Moved element %d from " % mouseSelection_elementIndex + str(elements[mouseSelection_elementIndex].pos) + " to pos " + str(mousePos))
                 elements[mouseSelection_elementIndex].pos = np.array([x,y])
             mouseSelection_elementIndex = None
+            viewDrag_mouseStart = None
         
                                                         #Handle window close
         if event.type == pygame.QUIT: # If user clicked close
