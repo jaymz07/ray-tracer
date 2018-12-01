@@ -27,7 +27,8 @@ PI = np.pi
 size = (700, 700)
 screen = pygame.display.set_mode(size)
 
-coord_lims = [[-1000.0,1000.0],[-1000.0,1000.0]]
+coord_lims_default = [[-1000.0,1000.0],[-1000.0,1000.0]]
+coord_lims = coord_lims_default
 
 MAX_BOUNCE = 20
 
@@ -45,7 +46,7 @@ def screenMapInv(posScreen):
     scaleY = float(size[1])/rangeY
     return (int((posScreen[0]/size[0]*rangeX+coord_lims[0][0])), int(-posScreen[1]*rangeY/size[1]-coord_lims[1][0]), scaleX, scaleY )
 
-pygame.display.set_caption("Test")
+pygame.display.set_caption("Ray Tracer")
 
 # Loop until the user clicks the close button.
 done = False
@@ -133,6 +134,7 @@ mouseSelection_elementIndex = None
 mouseNear_elementIndex = None
 
 rotating_elementIndex = None
+scaling_elementIndex = None
     
 while not done:
     
@@ -143,31 +145,61 @@ while not done:
     #--------Keyboard Events---------------
         elif event.type == pygame.KEYDOWN:
             print(event)
+            x, y, _, _ = screenMapInv(mousePos)
             if(event.unicode == 'n'):
-                elements.append(opticalElement.FlatMirror(np.array(pygame.mouse.get_pos()),-45,100,{'color' : BLACK}))
+                elements.append(opticalElement.FlatMirror(np.array([x,y]),-45,100,{'color' : BLACK}))
             elif event.unicode == '\x08': #Backspace
                 if(len(elements) > 0):
                     del elements[-1]
+            elif event.unicode == 'r':    #Rotate
+                rotating_elementIndex = mouseNear_elementIndex
+            elif event.unicode == 's':    #Scale
+                scaling_elementIndex = mouseNear_elementIndex
+            elif event.unicode == '0':
+                coord_lims = coord_lims_default
+            elif event.key == 282:
+                coord_lims = np.array(coord_lims) * 2
+            elif event.key == 283:
+                coord_lims = np.array(coord_lims) / 2
+            elif event.key == 276:  #Left Arrow
+                coord_lims = np.array(coord_lims) - (coord_lims[0][1]-coord_lims[0][0])/10*np.array([[1.0,1.0],[0.0,0.0]])
+            elif event.key == 275:  #Right Arrow
+                coord_lims = np.array(coord_lims) + (coord_lims[0][1]-coord_lims[0][0])/10*np.array([[1.0,1.0],[0.0,0.0]])
+            elif event.key == 273:  #Up Arrow
+                coord_lims = np.array(coord_lims) - (coord_lims[1][1]-coord_lims[1][0])/10*np.array([[0.0,0.0],[1.0,1.0]])
+            elif event.key == 274:  #Down Arrow
+                coord_lims = np.array(coord_lims) + (coord_lims[1][1]-coord_lims[1][0])/10*np.array([[0.0,0.0],[1.0,1.0]])
         elif event.type == pygame.KEYUP:
             print("User let go of a key.")
             
     #-------Mouse Events--------
         elif event.type == pygame.MOUSEBUTTONDOWN:     #Mouse click events
+            print(event)
             for i in range(0,len(elements)):
                 mousePos = np.array(pygame.mouse.get_pos())
                 if(elements[i].checkIfMouseNear(mousePos, screenMapFunction)):
                     print("Grabbed element %d" % i)
                     mouseSelection_elementIndex = i
+            rotating_elementIndex = None
+            scaling_elementIndex = None
         
         elif event.type == pygame.MOUSEMOTION:          #Mouse movement events
             mousePos = np.array(pygame.mouse.get_pos())
             #print(mousePos)
             #print(mouseSelection_elementIndex)
+            x, y, scaleX, scaleY = screenMapInv(mousePos)
             if(mouseSelection_elementIndex is not None):
-                x, y, _, _ = screenMapInv(mousePos)
                 newPos = np.array([x,y])
                 print("Dragging element %d to pos " % mouseSelection_elementIndex + str(newPos))
                 elements[mouseSelection_elementIndex].pos = newPos
+            elif(rotating_elementIndex is not None):
+                relVect = np.array([x,y]) - elements[rotating_elementIndex].pos
+                newAngle = np.arctan2(relVect[1],relVect[0])
+                elements[rotating_elementIndex].orientation = 180*newAngle/np.pi
+            elif(scaling_elementIndex is not None):
+                relVect = np.array([x,y]) - elements[scaling_elementIndex].pos
+                newScale = np.linalg.norm([relVect[1],relVect[0]])
+                elements[scaling_elementIndex].boundaries = newScale
             else:
                 mouseNear_elementIndex = None
                 for i in range(0,len(elements)):

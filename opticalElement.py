@@ -55,7 +55,8 @@ class OpticalElement(ABC):
     
     
 class FlatMirror(OpticalElement): 
-      
+    
+    #Vector behavior      
     def rayIntersection(self, ray_pos, ray_dir):
         #super.rayIntersection(ray_pos,ray_dir)
         oVect = [np.cos(self.orientation*np.pi/180), np.sin(self.orientation*np.pi/180)]
@@ -81,6 +82,7 @@ class FlatMirror(OpticalElement):
             return True
         return False
 
+    #Graphical Representation
     def draw(self,screen,screenPosFunc):
         #super.draw(None,None)
         color = BLUE
@@ -90,7 +92,7 @@ class FlatMirror(OpticalElement):
             color = self.properties['color']
         x1, y1 = self.boundaries*np.cos(angleRad)*scaleX + screenX, -self.boundaries*np.sin(angleRad)*scaleY + screenY
         x2, y2 = -self.boundaries*np.cos(angleRad)*scaleX + screenX, self.boundaries*np.sin(angleRad)*scaleY + screenY
-        pygame.draw.line(screen, color, [x1,y1],[x2,y2],10)
+        pygame.draw.line(screen, color, [x1,y1],[x2,y2],7)
         return
     
     def drawSelected(self, screen, screenPosFunc):
