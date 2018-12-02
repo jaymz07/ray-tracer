@@ -104,6 +104,6 @@ class FlatMirror(OpticalElement):
         x1, y1 = self.boundaries*np.cos(angleRad)*scaleX + screenX, -self.boundaries*np.sin(angleRad)*scaleY + screenY
         x2, y2 = -self.boundaries*np.cos(angleRad)*scaleX + screenX, self.boundaries*np.sin(angleRad)*scaleY + screenY
         pygame.draw.line(screen, color, [x1,y1],[x2,y2],10)
-        pygame.draw.circle(screen, color, [screenX, screenY], int(max(scaleX, scaleY)*25),0)
+        pygame.draw.circle(screen, color, [screenX, screenY], 10,0)
         return
     
