@@ -11,6 +11,8 @@ import numpy as np
 import opticalElement
 import copy
 
+from menu import Menu
+
 pygame.init()
 
 # Used to manage how fast the screen updates
@@ -75,18 +77,42 @@ rays = []
 #theta = -0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : BLUE})
 
 #>>>>Vernier slicer---------
-N = 24
-count = 0
-for theta in np.linspace(-5,3,N):
-    rays.append({'pos' : np.array([-1000,690]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : [int(255*count/N),0,255-int(255*count/N)]})
-    count += 1
+#N = 24
+#count = 0
+#for theta in np.linspace(-5,3,N):
+#    rays.append({'pos' : np.array([-1000,690]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : [int(255*count/N),0,255-int(255*count/N)]})
+#    count += 1
+#
+#elements.append(opticalElement.FlatMirror([100,775],-43.5,100,{'color' : BLACK}))
+#elements.append(opticalElement.FlatMirror([420,720],-44.8,100,{'color' : BLACK}))
+#elements.append(opticalElement.FlatMirror([740,640],-46.0,100,{'color' : BLACK}))
 
-elements.append(opticalElement.FlatMirror([100,775],-43.5,100,{'color' : BLACK}))
-elements.append(opticalElement.FlatMirror([420,720],-44.8,100,{'color' : BLACK}))
-elements.append(opticalElement.FlatMirror([740,640],-46.0,100,{'color' : BLACK}))
+#>>>>>Import saved configuration--------
+import pickle
+elements = pickle.load(open('cateyeDelayStage.pkl','rb'))
+
+theta = 0; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : RED})
+theta = 0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : GREEN})
+theta = -0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : BLUE})
+
+#------------Right Click Menu Functions-----------------------
+
+menuEntries = ['Flat Mirror', 'Curved Mirror']
+rightClickMenu = Menu([0,0], menuEntries, rightClick=True,activated=False)
+
+def addFlatMirror():
+    x, y, _, _ = screenMapInv(mousePos)
+    elements.append(opticalElement.FlatMirror([x,y],45,100,{'color' : BLACK}))
+    
+def addCurvedMirror():
+    x, y, _, _ = screenMapInv(mousePos)
+    elements.append(opticalElement.CurvedMirror([x,y],45,[100,1000],{'color' : BLACK}))
+    
+rightClickMenu.assignFunction(0,addFlatMirror)
+rightClickMenu.assignFunction(1,addCurvedMirror)
 
 
-# -------- Main Program Loop -----------
+# -------- Ray Tracing ---------------
 
 def rayTrace():
     outputRays = [rays]
@@ -103,19 +129,17 @@ def rayTrace():
                 #print(intersect)
                 if(intersect is None):
                     continue
-                if(elem.checkBoundaries(intersect)):
-                    dist = np.linalg.norm(intersect-r['pos'])
-                    if(dist < 1):
-                        continue
-                    if(closestElem is not None and elem == closestElem):
-                        continue
-                    if(minDist > dist):
-                        minDist = dist
-                        closestElem = elem
-                        closestIntersect = intersect
-                    #print(dist)
+                dist = np.linalg.norm(intersect-r['pos'])
+                if(dist < .0001):
+                    continue
+#                if(closestElem is not None and elem == closestElem):
+#                    continue
+                if(minDist > dist):
+                    minDist = dist
+                    closestElem = elem
+                    closestIntersect = intersect
             if(closestElem is not None):    
-                dir_new = closestElem.reflect(r['pos'],r['dir'])
+                dir_new = closestElem.reflect(r['pos'],r['dir'],closestIntersect)
                 dir_new = dir_new / np.linalg.norm(dir_new)
                 r['intersect'] = closestIntersect
                 if('color' in r):
@@ -145,6 +169,7 @@ viewDrag_cstart = None
 while not done:
     
     for event in pygame.event.get():                    #Handle events
+        rightClickMenu.processMouseInput(event)
         if event.type == pygame.QUIT:
             print("User asked to quit.")
             
@@ -191,10 +216,12 @@ while not done:
                     if(elements[i].checkIfMouseNear(mousePos, screenMapFunction)):
                         print("Grabbed element %d" % i)
                         mouseSelection_elementIndex = i
+                if(mouseSelection_elementIndex is None):
+                    x, y, scaleX, scaleY = screenMapInv(mousePos)
+                    viewDrag_mouseStart = np.array([x,y])
+                    viewDrag_cstart = copy.deepcopy(coord_lims)
             elif(event.button == 3):
-                x, y, scaleX, scaleY = screenMapInv(mousePos)
-                viewDrag_mouseStart = np.array([x,y])
-                viewDrag_cstart = copy.deepcopy(coord_lims)
+                continue
                 
             elif(event.button == 4):
                 x, y, scaleX, scaleY = screenMapInv(mousePos)
@@ -223,11 +250,15 @@ while not done:
             elif(rotating_elementIndex is not None):
                 relVect = np.array([x,y]) - elements[rotating_elementIndex].pos
                 newAngle = np.arctan2(relVect[1],relVect[0])
-                elements[rotating_elementIndex].orientation = 180*newAngle/np.pi
+                elements[rotating_elementIndex].setOrientation(180*newAngle/np.pi)
             elif(scaling_elementIndex is not None):
                 relVect = np.array([x,y]) - elements[scaling_elementIndex].pos
                 newScale = np.linalg.norm([relVect[1],relVect[0]])
-                elements[scaling_elementIndex].boundaries = newScale
+                if(elements[scaling_elementIndex].elementType() == 'FlatMirror'):
+                    elements[scaling_elementIndex].boundaries = newScale
+                elif(elements[scaling_elementIndex].elementType() == 'CurvedMirror'):
+                    elements[scaling_elementIndex].boundaries[0] = newScale
+                    
             elif(viewDrag_mouseStart is not None):
                 dragVect = np.array([x,y]) - viewDrag_mouseStart
                 coord_lims = viewDrag_cstart + np.array([[-dragVect[0]]*2,[dragVect[1]]*2])/1.2
@@ -281,6 +312,7 @@ while not done:
             else:
                 pygame.draw.line(screen, RED, [x1,y1],[x2,y2],2)
  
+    rightClickMenu.draw(screen)
     #Go ahead and update the screen with what we've drawn.
     pygame.display.flip()
  
