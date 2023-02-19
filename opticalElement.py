@@ -21,9 +21,9 @@ class OpticalElement(ABC):
     
     def __init__(self, pos, orientation, boundaries, properties):
         self.pos = np.array(pos)
-        self.orientation = orientation
+        self.orientation = orientation  #Angle in degrees
         self.boundaries = boundaries
-        self.properties = properties
+        self.properties = properties    #Focal length, etc
         
         super().__init__()
         

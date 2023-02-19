@@ -27,13 +27,13 @@ BLUE     = (   0,   0, 255)
 
 PI = np.pi
 
-size = (700, 700)
+size = (900, 900)
 screen = pygame.display.set_mode(size)
 
-coord_lims_default = np.array([[-1000.0,1000.0],[-1000.0,1000.0]])
+coord_lims_default = np.array([[-2000.0,2000.0],[-2000.0,2000.0]])
 coord_lims = coord_lims_default
 
-MAX_BOUNCE = 100
+MAX_BOUNCE = 200
 
 ZOOMFACTOR = 1.3
 
@@ -58,23 +58,23 @@ done = False
 
 elements = []
 rays = []
- 
+
 #-------------Optical configuration-----------------------------
 
 ##>>>>>Retroreflector array----------
-#sep = 200
-#L = sep * np.sqrt(2)/2
-#for i in range(0,7):
-#    elements.append(opticalElement.FlatMirror([500,700-sep*i],-(1-2*(i%2))*45,L,{'color' : BLACK}))
-#    elements.append(opticalElement.FlatMirror([-500,700-sep*i-sep],(1-2*(i%2))*45,L,{'color' : BLACK}))
-#    
-#disp = 10
-#elements.append(opticalElement.FlatMirror([500+disp,-700],45,L,{'color' : BLUE}))
-#elements.append(opticalElement.FlatMirror([500+disp,-700],-45,L,{'color' : BLUE}))
+# sep = 200
+# L = sep * np.sqrt(2)/2
+# for i in range(0,7):
+#     elements.append(opticalElement.FlatMirror([500,700-sep*i],-(1-2*(i%2))*45,L,{'color' : BLACK}))
+#     elements.append(opticalElement.FlatMirror([-500,700-sep*i-sep],(1-2*(i%2))*45,L,{'color' : BLACK}))
 #
-#theta = 0; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : RED})
-#theta = 0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : GREEN})
-#theta = -0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : BLUE})
+# disp = 10
+# elements.append(opticalElement.FlatMirror([500+disp,-700],45,L,{'color' : BLUE}))
+# elements.append(opticalElement.FlatMirror([500+disp,-700],-45,L,{'color' : BLUE}))
+#
+# theta = 0; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : RED})
+# theta = 0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : GREEN})
+# theta = -0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : BLUE})
 
 #>>>>Vernier slicer---------
 #N = 24
@@ -103,11 +103,11 @@ rightClickMenu = Menu([0,0], menuEntries, rightClick=True,activated=False)
 def addFlatMirror():
     x, y, _, _ = screenMapInv(mousePos)
     elements.append(opticalElement.FlatMirror([x,y],45,100,{'color' : BLACK}))
-    
+
 def addCurvedMirror():
     x, y, _, _ = screenMapInv(mousePos)
     elements.append(opticalElement.CurvedMirror([x,y],45,[100,1000],{'color' : BLACK}))
-    
+
 rightClickMenu.assignFunction(0,addFlatMirror)
 rightClickMenu.assignFunction(1,addCurvedMirror)
 
@@ -138,7 +138,7 @@ def rayTrace():
                     minDist = dist
                     closestElem = elem
                     closestIntersect = intersect
-            if(closestElem is not None):    
+            if(closestElem is not None):
                 dir_new = closestElem.reflect(r['pos'],r['dir'],closestIntersect)
                 dir_new = dir_new / np.linalg.norm(dir_new)
                 r['intersect'] = closestIntersect
@@ -152,10 +152,10 @@ def rayTrace():
             outputRays.append(newRays)
     return outputRays
 
-                
-    
+
+
 # -------- Main program loop---------------
-    
+
 #Keep track of mouse manipulations
 mouseSelection_elementIndex = None
 mouseNear_elementIndex = None
@@ -165,14 +165,14 @@ scaling_elementIndex = None
 
 viewDrag_mouseStart = None
 viewDrag_cstart = None
-    
+
 while not done:
-    
+
     for event in pygame.event.get():                    #Handle events
         rightClickMenu.processMouseInput(event)
         if event.type == pygame.QUIT:
             print("User asked to quit.")
-            
+
     #--------Keyboard Events---------------
         elif event.type == pygame.KEYDOWN:
             print(event)
@@ -206,7 +206,7 @@ while not done:
                 coord_lims = np.array(coord_lims) + (coord_lims[1][1]-coord_lims[1][0])/10*np.array([[0.0,0.0],[1.0,1.0]])
         elif event.type == pygame.KEYUP:
             print("User let go of a key.")
-            
+
     #-------Mouse Events--------
         elif event.type == pygame.MOUSEBUTTONDOWN:     #Mouse click events
             print(event)
@@ -222,7 +222,7 @@ while not done:
                     viewDrag_cstart = copy.deepcopy(coord_lims)
             elif(event.button == 3):
                 continue
-                
+
             elif(event.button == 4):
                 x, y, scaleX, scaleY = screenMapInv(mousePos)
                 coord_lims[0][0] = (coord_lims[0][0] - x) * ZOOMFACTOR + x
@@ -237,7 +237,7 @@ while not done:
                 coord_lims[1][1] = (coord_lims[1][1] + y) / ZOOMFACTOR - y
             rotating_elementIndex = None
             scaling_elementIndex = None
-        
+
         elif event.type == pygame.MOUSEMOTION:          #Mouse movement events
             mousePos = np.array(pygame.mouse.get_pos())
             #print(mousePos)
@@ -245,7 +245,7 @@ while not done:
             x, y, scaleX, scaleY = screenMapInv(mousePos)
             if(mouseSelection_elementIndex is not None):
                 newPos = np.array([x,y])
-                print("Dragging element %d to pos " % mouseSelection_elementIndex + str(newPos))
+                #print("Dragging element %d to pos " % mouseSelection_elementIndex + str(newPos))
                 elements[mouseSelection_elementIndex].pos = newPos
             elif(rotating_elementIndex is not None):
                 relVect = np.array([x,y]) - elements[rotating_elementIndex].pos
@@ -258,18 +258,18 @@ while not done:
                     elements[scaling_elementIndex].boundaries = newScale
                 elif(elements[scaling_elementIndex].elementType() == 'CurvedMirror'):
                     elements[scaling_elementIndex].boundaries[0] = newScale
-                    
+
             elif(viewDrag_mouseStart is not None):
                 dragVect = np.array([x,y]) - viewDrag_mouseStart
                 coord_lims = viewDrag_cstart + np.array([[-dragVect[0]]*2,[dragVect[1]]*2])/1.2
-                
+
             else:
                 mouseNear_elementIndex = None
                 for i in range(0,len(elements)):
                     mousePos = np.array(pygame.mouse.get_pos())
                     if(elements[i].checkIfMouseNear(mousePos, screenMapFunction)):
                         mouseNear_elementIndex = i
-                
+
         elif event.type == pygame.MOUSEBUTTONUP:        #Mouse release event
             mousePos = np.array(pygame.mouse.get_pos())
             print(mousePos)
@@ -280,25 +280,25 @@ while not done:
                 elements[mouseSelection_elementIndex].pos = np.array([x,y])
             mouseSelection_elementIndex = None
             viewDrag_mouseStart = None
-        
+
                                                         #Handle window close
         if event.type == pygame.QUIT: # If user clicked close
             done = True # Flag that we are done so we exit this loop
- 
+
     outputRays = rayTrace()
-    
+
     #----------------Drawing code should go here------------
-    
+
     #Clear screen
     screen.fill(WHITE)
-    
+
     #Draw the optical elements
     for i in range(0,len(elements)):
         if(mouseNear_elementIndex is not None and mouseNear_elementIndex == i):
             elements[i].drawSelected(screen,screenMapFunction)
         else:
             elements[i].draw(screen,screenMapFunction)
-    
+
     #Draw the rays
     for i in range(0,len(outputRays)):
         for j in range(0,len(outputRays[i])):
@@ -311,11 +311,11 @@ while not done:
                 pygame.draw.line(screen, outputRays[i][j]['color'], [x1,y1],[x2,y2],2)
             else:
                 pygame.draw.line(screen, RED, [x1,y1],[x2,y2],2)
- 
+
     rightClickMenu.draw(screen)
     #Go ahead and update the screen with what we've drawn.
     pygame.display.flip()
- 
+
     #Limit to 60 frames per second
     clock.tick(60)
 
