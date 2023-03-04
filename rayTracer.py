@@ -39,6 +39,8 @@ MAX_BOUNCE = 200
 
 ZOOMFACTOR = 1.3
 
+
+# Mapping from program coordinates to screen coordinates
 def screenMapFunction(pos):
     rangeX = abs(coord_lims[0][0] - coord_lims[0][1])
     rangeY = abs(coord_lims[1][0] - coord_lims[1][1])
@@ -46,6 +48,7 @@ def screenMapFunction(pos):
     scaleY = float(size[1])/rangeY
     return (int((pos[0]-coord_lims[0][0])/rangeX*size[0]), int((-pos[1]-coord_lims[1][0])/rangeY*size[1]), scaleX, scaleY )
 
+# Screen coordinates to program coordinates
 def screenMapInv(posScreen):
     rangeX = abs(coord_lims[0][0] - coord_lims[0][1])
     rangeY = abs(coord_lims[1][0] - coord_lims[1][1])
@@ -58,31 +61,21 @@ pygame.display.set_caption("Ray Tracer")
 # Loop until the user clicks the close button.
 done = False
 
-elements = []
-traces = []
-
 #-------------Optical configuration-----------------------------
-
-#>>>>>Import saved configuration--------
-#import pickle
-#elements = pickle.load(open('cateyeDelayStage.pkl','rb'))
+# Configuration of mirrors and lenses and stuff
 elements = []
 elements.append(opticalElement.FlatMirror([100,710],-43.5,100,{'color' : BLUE}))
 elements.append(opticalElement.Lens([120,270],245,[130,40],{'color' : BLUE}))
 
 
+# Initial Rays
+traces = []
 for theta in np.linspace(-2,2,10):
     ray_i = Ray( np.array([-1000, 710]), \
                 np.array([np.cos(np.pi*theta/180), np.sin(np.pi*theta/180)]) )
     traces.append( Trace(ray_i) )
 
-
-#theta = 0;# rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : RED})
-#theta = 0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : GREEN})
-#theta = -0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : BLUE})
-
 #------------Right Click Menu Functions-----------------------
-
 menuEntries = ['Flat Mirror', 'Curved Mirror', 'Lens']
 rightClickMenu = Menu([0,0], menuEntries, rightClick=True,activated=False)
 
@@ -104,7 +97,6 @@ rightClickMenu.assignFunction(2,addLens)
 
 
 # -------- Ray Tracing ---------------
-
 def rayTrace():
     traces_out = []
     for t in traces:
@@ -261,7 +253,7 @@ while not done:
 
     #----------------Drawing code should go here------------
 
-    #Clear screen
+    #Clear screen, fill with background color
     screen.fill(BG_COLOR)
 
     #Draw the rays
