@@ -9,6 +9,7 @@ Created on Sun Nov 25 16:15:36 2018
 import pygame
 import numpy as np
 import opticalElement
+from rayList import Ray, Trace
 import copy
 
 from menu import Menu
@@ -24,6 +25,7 @@ WHITE    = ( 255, 255, 255)
 GREEN    = (   0, 255,   0)
 RED      = ( 255,   0,   0)
 BLUE     = (   0,   0, 255)
+BG_COLOR = ( 30,   30,  30)
 
 PI = np.pi
 
@@ -57,101 +59,60 @@ pygame.display.set_caption("Ray Tracer")
 done = False
 
 elements = []
-rays = []
+traces = []
 
 #-------------Optical configuration-----------------------------
 
-##>>>>>Retroreflector array----------
-# sep = 200
-# L = sep * np.sqrt(2)/2
-# for i in range(0,7):
-#     elements.append(opticalElement.FlatMirror([500,700-sep*i],-(1-2*(i%2))*45,L,{'color' : BLACK}))
-#     elements.append(opticalElement.FlatMirror([-500,700-sep*i-sep],(1-2*(i%2))*45,L,{'color' : BLACK}))
-#
-# disp = 10
-# elements.append(opticalElement.FlatMirror([500+disp,-700],45,L,{'color' : BLUE}))
-# elements.append(opticalElement.FlatMirror([500+disp,-700],-45,L,{'color' : BLUE}))
-#
-# theta = 0; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : RED})
-# theta = 0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : GREEN})
-# theta = -0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : BLUE})
-
-#>>>>Vernier slicer---------
-#N = 24
-#count = 0
-#for theta in np.linspace(-5,3,N):
-#    rays.append({'pos' : np.array([-1000,690]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : [int(255*count/N),0,255-int(255*count/N)]})
-#    count += 1
-#
-#elements.append(opticalElement.FlatMirror([100,775],-43.5,100,{'color' : BLACK}))
-#elements.append(opticalElement.FlatMirror([420,720],-44.8,100,{'color' : BLACK}))
-#elements.append(opticalElement.FlatMirror([740,640],-46.0,100,{'color' : BLACK}))
-
 #>>>>>Import saved configuration--------
-import pickle
-elements = pickle.load(open('cateyeDelayStage.pkl','rb'))
+#import pickle
+#elements = pickle.load(open('cateyeDelayStage.pkl','rb'))
+elements = []
+elements.append(opticalElement.FlatMirror([100,710],-43.5,100,{'color' : BLUE}))
+elements.append(opticalElement.Lens([120,270],245,[130,40],{'color' : BLUE}))
 
-theta = 0; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : RED})
-theta = 0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : GREEN})
-theta = -0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : BLUE})
+
+for theta in np.linspace(-2,2,10):
+    ray_i = Ray( np.array([-1000, 710]), \
+                np.array([np.cos(np.pi*theta/180), np.sin(np.pi*theta/180)]) )
+    traces.append( Trace(ray_i) )
+
+
+#theta = 0;# rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : RED})
+#theta = 0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : GREEN})
+#theta = -0.2; rays.append({'pos' : np.array([-1000,710]), 'dir' : np.array([np.cos(np.pi*theta/180),np.sin(np.pi*theta/180)]), 'color' : BLUE})
 
 #------------Right Click Menu Functions-----------------------
 
-menuEntries = ['Flat Mirror', 'Curved Mirror']
+menuEntries = ['Flat Mirror', 'Curved Mirror', 'Lens']
 rightClickMenu = Menu([0,0], menuEntries, rightClick=True,activated=False)
 
 def addFlatMirror():
     x, y, _, _ = screenMapInv(mousePos)
-    elements.append(opticalElement.FlatMirror([x,y],45,100,{'color' : BLACK}))
+    elements.append(opticalElement.FlatMirror([x,y],45,100,{'color' : BLUE}))
 
 def addCurvedMirror():
     x, y, _, _ = screenMapInv(mousePos)
-    elements.append(opticalElement.CurvedMirror([x,y],45,[100,1000],{'color' : BLACK}))
+    elements.append(opticalElement.CurvedMirror([x,y],45,[100,1000],{'color' : BLUE}))
+
+def addLens():
+    x, y, _, _ = screenMapInv(mousePos)
+    elements.append(opticalElement.Lens([x,y],45,[130,40],{'color' : BLUE}))
 
 rightClickMenu.assignFunction(0,addFlatMirror)
 rightClickMenu.assignFunction(1,addCurvedMirror)
+rightClickMenu.assignFunction(2,addLens)
 
 
 # -------- Ray Tracing ---------------
 
 def rayTrace():
-    outputRays = [rays]
-
-    for i in range(0,MAX_BOUNCE):
-        newRays = []
-        #print("i = %d" % i)
-        for r in outputRays[-1]:
-            minDist = np.inf
-            closestElem = None
-            closestIntersect = None
-            for elem in elements:
-                intersect = elem.rayIntersection(r['pos'], r['dir'])
-                #print(intersect)
-                if(intersect is None):
-                    continue
-                dist = np.linalg.norm(intersect-r['pos'])
-                if(dist < .0001):
-                    continue
-#                if(closestElem is not None and elem == closestElem):
-#                    continue
-                if(minDist > dist):
-                    minDist = dist
-                    closestElem = elem
-                    closestIntersect = intersect
-            if(closestElem is not None):
-                dir_new = closestElem.reflect(r['pos'],r['dir'],closestIntersect)
-                dir_new = dir_new / np.linalg.norm(dir_new)
-                r['intersect'] = closestIntersect
-                if('color' in r):
-                    newRays.append({'pos' : closestIntersect, 'dir' : dir_new, 'color' : r['color']})
-                else:
-                    newRays.append({'pos' : closestIntersect, 'dir' : dir_new, 'color' : r['color']})
-            else:
-                r['intersect'] = None
-        if(len(newRays) != 0):
-            outputRays.append(newRays)
-    return outputRays
-
+    traces_out = []
+    for t in traces:
+        traces_out.append(copy.deepcopy(t))
+    for i in range(MAX_BOUNCE):
+        for t in traces_out:
+            t.trace_next(elements)
+    return traces_out
 
 
 # -------- Main program loop---------------
@@ -178,7 +139,7 @@ while not done:
             print(event)
             x, y, _, _ = screenMapInv(mousePos)
             if(event.unicode == 'n'):
-                elements.append(opticalElement.FlatMirror(np.array([x,y]),-45,100,{'color' : BLACK}))
+                elements.append(opticalElement.FlatMirror(np.array([x,y]),-45,100,{'color' : BLUE}))
             elif event.unicode == '\x08': #Backspace
                 if(len(elements) > 0):
                     del elements[-1]
@@ -258,6 +219,8 @@ while not done:
                     elements[scaling_elementIndex].boundaries = newScale
                 elif(elements[scaling_elementIndex].elementType() == 'CurvedMirror'):
                     elements[scaling_elementIndex].boundaries[0] = newScale
+                elif(elements[scaling_elementIndex].elementType() == 'Lens'):
+                    elements[scaling_elementIndex].boundaries[0] = newScale
 
             elif(viewDrag_mouseStart is not None):
                 dragVect = np.array([x,y]) - viewDrag_mouseStart
@@ -285,12 +248,37 @@ while not done:
         if event.type == pygame.QUIT: # If user clicked close
             done = True # Flag that we are done so we exit this loop
 
-    outputRays = rayTrace()
+    outputTraces = rayTrace()
+    lines = []
+    for t in outputTraces:
+        for l in t.get_lines():
+            lines.append(l)
+    exitRays = []
+    for t in outputTraces:
+        for r in t.get_last_rays():
+            exitRays.append(r)
+
 
     #----------------Drawing code should go here------------
 
     #Clear screen
-    screen.fill(WHITE)
+    screen.fill(BG_COLOR)
+
+    #Draw the rays
+    for l in lines:
+        x1, y1, _,_ = screenMapFunction(l[0])
+        x2, y2, _,_ = screenMapFunction(l[1])
+        try:
+            pygame.draw.line(screen, RED, [x1,y1],[x2,y2],1)
+        except TypeError:
+            print("Invalid ray!")
+    for r in exitRays:
+        x1, y1, _,_ = screenMapFunction(r.pos)
+        x2, y2, _,_ = screenMapFunction(r.pos + r.direc*(np.max(coord_lims)-np.min(coord_lims)))
+        try:
+            pygame.draw.line(screen, RED, [x1,y1],[x2,y2],1)
+        except TypeError:
+            print("Invalid ray!")
 
     #Draw the optical elements
     for i in range(0,len(elements)):
@@ -298,19 +286,6 @@ while not done:
             elements[i].drawSelected(screen,screenMapFunction)
         else:
             elements[i].draw(screen,screenMapFunction)
-
-    #Draw the rays
-    for i in range(0,len(outputRays)):
-        for j in range(0,len(outputRays[i])):
-            x1, y1, _,_ = screenMapFunction(outputRays[i][j]['pos'])
-            if('intersect' in outputRays[i][j] and outputRays[i][j]['intersect'] is not None):
-                x2, y2, _,_ = screenMapFunction(outputRays[i][j]['intersect'])
-            else:
-                x2, y2, _,_ = screenMapFunction(outputRays[i][j]['pos'] + outputRays[i][j]['dir']*(np.max(coord_lims)-np.min(coord_lims)))
-            if('color' in outputRays[i][j]):
-                pygame.draw.line(screen, outputRays[i][j]['color'], [x1,y1],[x2,y2],2)
-            else:
-                pygame.draw.line(screen, RED, [x1,y1],[x2,y2],2)
 
     rightClickMenu.draw(screen)
     #Go ahead and update the screen with what we've drawn.
