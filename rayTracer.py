@@ -64,8 +64,14 @@ done = False
 #-------------Optical configuration-----------------------------
 # Configuration of mirrors and lenses and stuff
 elements = []
-elements.append(opticalElement.FlatMirror([100,710],-43.5,100,{'color' : BLUE}))
-elements.append(opticalElement.Lens([120,270],245,[130,40],{'color' : BLUE}))
+elements.append(opticalElement.FlatMirror( [100,710], # Position
+                                          -45,        # Angle
+                                          100,        # Size
+                                          {'color' : BLUE}))
+elements.append(opticalElement.Lens([120,270],        # Position
+                                    245,              # Angle
+                                    [130,40],         # Radius, Thickness
+                                    {'color' : BLUE}))
 
 
 # Initial Rays
@@ -164,7 +170,7 @@ while not done:
         elif event.type == pygame.MOUSEBUTTONDOWN:     #Mouse click events
             print(event)
             mousePos = np.array(pygame.mouse.get_pos())
-            if(event.button == 1):
+            if(event.button == 1):    # Left Click
                 for i in range(0,len(elements)):
                     if(elements[i].checkIfMouseNear(mousePos, screenMapFunction)):
                         print("Grabbed element %d" % i)
@@ -176,13 +182,13 @@ while not done:
             elif(event.button == 3):
                 continue
 
-            elif(event.button == 4):
+            elif(event.button == 4):  # Wheel
                 x, y, scaleX, scaleY = screenMapInv(mousePos)
                 coord_lims[0][0] = (coord_lims[0][0] - x) * ZOOMFACTOR + x
                 coord_lims[0][1] = (coord_lims[0][1] - x) * ZOOMFACTOR + x
                 coord_lims[1][0] = (coord_lims[1][0] + y) * ZOOMFACTOR - y
                 coord_lims[1][1] = (coord_lims[1][1] + y) * ZOOMFACTOR - y
-            elif(event.button == 5):
+            elif(event.button == 5):  # Wheel
                 x, y, scaleX, scaleY = screenMapInv(mousePos)
                 coord_lims[0][0] = (coord_lims[0][0] - x) / ZOOMFACTOR + x
                 coord_lims[0][1] = (coord_lims[0][1] - x) / ZOOMFACTOR + x
