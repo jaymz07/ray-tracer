@@ -121,6 +121,7 @@ mouseNear_elementIndex = None
 
 rotating_elementIndex = None
 scaling_elementIndex = None
+focusing_elementIndex = None
 
 viewDrag_mouseStart = None
 viewDrag_cstart = None
@@ -145,6 +146,8 @@ while not done:
                 rotating_elementIndex = mouseNear_elementIndex
             elif event.unicode == 's':    #Scale
                 scaling_elementIndex = mouseNear_elementIndex
+            elif event.unicode  == 'f':
+                focusing_elementIndex = mouseNear_elementIndex
             elif event.unicode == '0':   #Reset View
                 coord_lims = coord_lims_default
             elif event.unicode == 'd':
@@ -196,6 +199,7 @@ while not done:
                 coord_lims[1][1] = (coord_lims[1][1] + y) / ZOOMFACTOR - y
             rotating_elementIndex = None
             scaling_elementIndex = None
+            focusing_elementIndex = None
 
         elif event.type == pygame.MOUSEMOTION:          #Mouse movement events
             mousePos = np.array(pygame.mouse.get_pos())
@@ -219,6 +223,13 @@ while not done:
                     elements[scaling_elementIndex].boundaries[0] = newScale
                 elif(elements[scaling_elementIndex].elementType() == 'Lens'):
                     elements[scaling_elementIndex].boundaries[0] = newScale
+            elif(focusing_elementIndex is not None):
+                relVect = np.array([x,y]) - elements[focusing_elementIndex].pos
+                newScale = np.linalg.norm([relVect[1],relVect[0]])
+                if(elements[focusing_elementIndex].elementType() == 'CurvedMirror'):
+                    elements[focusing_elementIndex].boundaries[1] = newScale
+                elif(elements[focusing_elementIndex].elementType() == 'Lens'):
+                    elements[focusing_elementIndex].boundaries[1] = newScale
 
             elif(viewDrag_mouseStart is not None):
                 dragVect = np.array([x,y]) - viewDrag_mouseStart
